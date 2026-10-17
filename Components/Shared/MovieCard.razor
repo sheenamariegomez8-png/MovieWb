@@ -1,0 +1,51 @@
+@inject MovieCatalogService Catalog
+
+<a class="movie-card" href="@($"/movies/{Movie.MovieID}")" aria-label="@($"View details for {Movie.MovieTitle}")">
+    <div class="movie-poster-container">
+        @if (PosterUrl is null || _posterFailed)
+        {
+            <div class="movie-poster poster-fallback" aria-label="Poster unavailable for @Movie.MovieTitle">
+                <span>@Movie.MovieTitle</span>
+            </div>
+        }
+        else
+        {
+            <img class="movie-poster" src="@PosterUrl" alt="@($"{Movie.MovieTitle} movie poster")" loading="lazy" @onerror="HandlePosterError" />
+        }
+    </div>
+
+    <div class="movie-card-info">
+        <div class="movie-card-heading">
+            <h3>@Movie.MovieTitle</h3>
+            <span class="rating"><span aria-hidden="true">★</span> @Movie.Rating.ToString("0.0")</span>
+        </div>
+        <p>@Movie.Genre</p>
+        <div class="movie-card-meta">
+            <span>@Movie.DatePublished.Year</span>
+            <span>@Movie.Duration min</span>
+        </div>
+    </div>
+</a>
+
+@code {
+    [Parameter, EditorRequired]
+    public Movie Movie { get; set; } = default!;
+
+    private string? PosterUrl => Catalog.GetPosterUrl(Movie.MovieTitle);
+    private bool _posterFailed;
+    private string? _posterTitle;
+
+    protected override void OnParametersSet()
+    {
+        if (!string.Equals(_posterTitle, Movie.MovieTitle, StringComparison.Ordinal))
+        {
+            _posterFailed = false;
+            _posterTitle = Movie.MovieTitle;
+        }
+    }
+
+    private void HandlePosterError()
+    {
+        _posterFailed = true;
+    }
+}

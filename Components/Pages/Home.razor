@@ -1,0 +1,194 @@
+@page "/"
+@inject MovieCatalogService Catalog
+@inject ILogger<Home> Logger
+
+<PageTitle>MovieVerse | People We Meet on Vacation</PageTitle>
+
+<section class="hero" aria-labelledby="hero-title">
+    <div class="hero-content">
+        <span class="eyebrow hero-eyebrow"><span class="eyebrow-dot"></span> MOVIEVERSE FEATURED</span>
+        <h1 id="hero-title">People We Meet<br /><span>on Vacation</span></h1>
+        @if (_featured is not null && !string.IsNullOrWhiteSpace(_featured.Synopsis))
+        {
+            <p class="hero-description">@_featured.Synopsis</p>
+        }
+        else
+        {
+            <p class="hero-description">Discover this featured title and explore more stories in the MovieVerse collection.</p>
+        }
+
+        @if (_featured is not null)
+        {
+            <div class="hero-meta">
+                <span>@_featured.Genre</span>
+                <span class="hero-meta-divider" aria-hidden="true"></span>
+                <span>@_featured.DatePublished.Year</span>
+            </div>
+        }
+
+        <div class="hero-actions">
+            <a class="button-primary" href="@FeaturedMovieUrl">Explore movie <span aria-hidden="true">↗</span></a>
+            <a class="button-secondary" href="/movies">Browse movies <span aria-hidden="true">→</span></a>
+        </div>
+    </div>
+    <div class="hero-bottom-line" aria-hidden="true"></div>
+</section>
+
+<div class="home-catalog">
+    @if (_error is not null)
+    {
+        <div class="notice notice-error" role="alert">@_error</div>
+    }
+    else if (_loading)
+    {
+        <p class="catalog-message" role="status">Loading movies from the MovieVerse catalog…</p>
+    }
+    else
+    {
+        <section class="catalog-section" aria-labelledby="featured-heading">
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">A SPOTLIGHT FROM THE COLLECTION</span>
+                    <h2 id="featured-heading">Featured movies</h2>
+                </div>
+                <a class="text-link" href="/movies">View all movies <span aria-hidden="true">→</span></a>
+            </div>
+            @if (FeaturedMovies.Any())
+            {
+                <div class="movie-rail" aria-label="Featured movies">
+                    @foreach (var movie in FeaturedMovies)
+                    {
+                        <MovieCard Movie="movie" />
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="catalog-message">Featured movies will appear here when the catalog has titles.</p>
+            }
+        </section>
+
+        <section class="catalog-section" aria-labelledby="popular-heading">
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">PICKS FROM THE CATALOG</span>
+                    <h2 id="popular-heading">Popular movies</h2>
+                    <p class="section-description">Selected from available titles and ordered by rating; popularity metrics aren't available.</p>
+                </div>
+                <a class="text-link" href="/movies">Explore the collection <span aria-hidden="true">→</span></a>
+            </div>
+            @if (PopularMovies.Any())
+            {
+                <div class="movie-rail" aria-label="Popular movies">
+                    @foreach (var movie in PopularMovies)
+                    {
+                        <MovieCard Movie="movie" />
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="catalog-message">Movies will appear here when they are available in the catalog.</p>
+            }
+        </section>
+
+        <section class="catalog-section recently-added" aria-labelledby="recent-heading">
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">FRESH FROM THE ARCHIVE</span>
+                    <h2 id="recent-heading">Recently published</h2>
+                </div>
+                <a class="text-link" href="/movies">Browse all movies <span aria-hidden="true">→</span></a>
+            </div>
+            @if (RecentMovies.Any())
+            {
+                <div class="movie-rail" aria-label="Recently published movies">
+                    @foreach (var movie in RecentMovies)
+                    {
+                        <MovieCard Movie="movie" />
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="empty-state">
+                    <h3>No movies published yet</h3>
+                    <p>Recently published movies will appear here when they are added to the catalog.</p>
+                </div>
+            }
+        </section>
+
+        <section id="genres" class="catalog-section genres-section" aria-labelledby="genres-heading">
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">PICK A MOOD</span>
+                    <h2 id="genres-heading">Explore by genre</h2>
+                </div>
+            </div>
+            @if (Genres.Any())
+            {
+                <div class="genre-list">
+                    @foreach (var genre in Genres)
+                    {
+                        <a class="genre-chip" href="@($"/movies?genre={Uri.EscapeDataString(genre)}")">@genre <span aria-hidden="true">↗</span></a>
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="catalog-message">Genres will appear here when movies are available.</p>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    private const string FeaturedMovieTitle = "People We Meet on Vacation";
+
+    private List<Movie> _movies = [];
+    private string? _error;
+    private bool _loading = true;
+
+    private Movie? _featured => _movies.FirstOrDefault(movie =>
+        string.Equals(movie.MovieTitle, FeaturedMovieTitle, StringComparison.OrdinalIgnoreCase));
+
+    private string FeaturedMovieUrl => _featured is null ? "/movies" : $"/movies/{_featured.MovieID}";
+
+    private IEnumerable<Movie> FeaturedMovies =>
+        _movies.OrderByDescending(movie => movie.MovieID == _featured?.MovieID)
+            .ThenByDescending(movie => movie.DatePublished)
+            .ThenBy(movie => movie.MovieTitle)
+            .Take(6);
+
+    private IEnumerable<Movie> PopularMovies =>
+        _movies.OrderByDescending(movie => movie.Rating)
+            .ThenBy(movie => movie.MovieTitle)
+            .Take(6);
+
+    private IEnumerable<Movie> RecentMovies =>
+        _movies.OrderByDescending(movie => movie.DatePublished)
+            .ThenBy(movie => movie.MovieTitle)
+            .Take(6);
+
+    private IEnumerable<string> Genres =>
+        _movies.SelectMany(movie => movie.Genre.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(genre => genre);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _movies = (await Catalog.GetMoviesAsync()).ToList();
+        }
+        catch (MovieDataAccessException exception)
+        {
+            Logger.LogWarning(exception, "The home page could not load the movie catalog.");
+            _error = exception.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

@@ -1,0 +1,99 @@
+@page "/movies/{MovieID:int}"
+@inject MovieCatalogService Catalog
+@inject ILogger<MovieDetails> Logger
+
+<PageTitle>@(_movie is null ? "Movie details" : $"{_movie.MovieTitle} | MovieVerse")</PageTitle>
+
+<a class="back-link" href="/movies"><span aria-hidden="true">←</span> Back to movies</a>
+
+@if (_error is not null)
+{
+    <div class="notice notice-error" role="alert">@_error</div>
+}
+else if (_loading)
+{
+    <p class="catalog-message">Loading movie…</p>
+}
+else if (_movie is null)
+{
+    <div class="empty-state">
+        <span class="empty-icon" aria-hidden="true">✦</span>
+        <h1>Movie not found</h1>
+        <p>That title isn't in our collection. Head back to the movies page to keep exploring.</p>
+        <a class="button-primary" href="/movies">Explore movies</a>
+    </div>
+}
+else
+{
+    <article class="movie-detail">
+        <div class="detail-art">
+            <div class="movie-poster-container">
+                @if (PosterUrl is null || _posterFailed)
+                {
+                    <div class="movie-poster poster-fallback detail-fallback" aria-label="Poster unavailable for @_movie.MovieTitle">
+                        <span>@_movie.MovieTitle</span>
+                    </div>
+                }
+                else
+                {
+                    <img class="movie-poster" src="@PosterUrl" alt="@($"{_movie.MovieTitle} movie poster")" @onerror="HandlePosterError" />
+                }
+            </div>
+        </div>
+        <div class="detail-copy">
+            <span class="eyebrow">MOVIEVERSE FEATURE</span>
+            <h1>@_movie.MovieTitle</h1>
+            <div class="detail-tags">
+                <span>@_movie.Genre</span>
+                <span>@_movie.DatePublished.ToString("MMMM d, yyyy")</span>
+            </div>
+            <div class="detail-stats">
+                <div><span>RATING</span><strong class="rating"><span aria-hidden="true">★</span> @_movie.Rating.ToString("0.0") <small>/ 10</small></strong></div>
+                <div><span>RUNTIME</span><strong>@_movie.Duration <small>min</small></strong></div>
+                <div><span>DIRECTOR</span><strong>@_movie.Director</strong></div>
+            </div>
+            <div class="synopsis-block">
+                <h2>Synopsis</h2>
+                <p>@_movie.Synopsis</p>
+            </div>
+        </div>
+    </article>
+}
+
+@code {
+    [Parameter]
+    public int MovieID { get; set; }
+
+    private Movie? _movie;
+    private string? _error;
+    private bool _loading = true;
+    private bool _posterFailed;
+
+    private string? PosterUrl => _movie is null ? null : Catalog.GetPosterUrl(_movie.MovieTitle);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _error = null;
+        _posterFailed = false;
+
+        try
+        {
+            _movie = await Catalog.GetMovieByIdAsync(MovieID);
+        }
+        catch (MovieDataAccessException exception)
+        {
+            Logger.LogWarning(exception, "Could not load movie {MovieId}.", MovieID);
+            _error = exception.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void HandlePosterError()
+    {
+        _posterFailed = true;
+    }
+}

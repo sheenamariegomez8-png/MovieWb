@@ -1,0 +1,29 @@
+#blazor-error-ui {
+    align-items: center;
+    background: #211a2b;
+    border: 1px solid #8b385e;
+    border-radius: 12px;
+    bottom: 1rem;
+    box-shadow: 0 12px 35px #0009;
+    color: #fff;
+    display: none;
+    gap: 1rem;
+    left: 1rem;
+    padding: .8rem 1rem;
+    position: fixed;
+    z-index: 1000;
+}
+
+#blazor-error-ui .reload,
+#blazor-error-ui .dismiss {
+    background: none;
+    border: 0;
+    color: #e5a5c3;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+#blazor-error-ui .dismiss {
+    font-size: 1.4rem;
+    padding: 0;
+}

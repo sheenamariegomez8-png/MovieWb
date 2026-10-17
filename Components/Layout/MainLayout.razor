@@ -1,0 +1,31 @@
+﻿@inherits LayoutComponentBase
+
+<div class="app-shell">
+    <header class="site-header">
+        <NavMenu />
+    </header>
+
+    <main class="content-shell">
+        @Body
+    </main>
+
+    <footer class="site-footer">
+        <div class="footer-about">
+            <a class="footer-brand" href="/">MOVIEVERSE</a>
+            <p>Discover memorable stories from the MovieVerse collection.</p>
+        </div>
+        <nav class="footer-links" aria-label="Footer navigation">
+            <a href="/">Home</a>
+            <a href="/movies">Movies</a>
+            <a href="/#genres">Genres</a>
+            <a href="/about">About</a>
+        </nav>
+        <small class="footer-copyright">© @DateTime.Now.Year MovieVerse</small>
+    </footer>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    <span>An unexpected error occurred.</span>
+    <a class="reload" href=".">Reload</a>
+    <button class="dismiss" type="button" aria-label="Dismiss">×</button>
+</div>

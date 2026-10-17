@@ -1,0 +1,128 @@
+@page "/movies"
+@inject MovieCatalogService Catalog
+@inject ILogger<Movies> Logger
+
+<PageTitle>Movies | MovieVerse</PageTitle>
+
+<section class="page-intro">
+    <span class="eyebrow">THE MOVIEVERSE COLLECTION</span>
+    <h1>Find your <span>next favorite.</span></h1>
+    <p>Browse stories from every corner of the cinematic universe.</p>
+</section>
+
+<div class="filter-bar movies-filter" role="search">
+    <label class="search-control">
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <span class="visually-hidden">Search movies by title</span>
+        <input type="search" placeholder="Search by movie title..." @bind="_searchTerm" @bind:event="oninput" @bind:after="LoadMoviesAsync" />
+    </label>
+    <label class="genre-control">
+        <span class="visually-hidden">Filter by genre</span>
+        <select @bind="_selectedGenre" @bind:after="LoadMoviesAsync">
+            <option value="">All genres</option>
+            @foreach (var genre in _genres)
+            {
+                <option value="@genre">@genre</option>
+            }
+        </select>
+    </label>
+</div>
+
+@if (_error is not null)
+{
+    <div class="notice notice-error" role="alert">@_error</div>
+}
+else if (_loading)
+{
+    <p class="catalog-message">Loading movies…</p>
+}
+else if (_movies.Count == 0)
+{
+    <div class="empty-state">
+        <span class="empty-icon" aria-hidden="true">⌕</span>
+        <h2>@(HasActiveFilters ? "No movies match your search" : "No movies yet")</h2>
+        <p>@(HasActiveFilters ? "Try a different title or select another genre." : "The MovieVerse catalog is empty. Movies will appear here as they are added to the database.")</p>
+    </div>
+}
+else
+{
+    <p class="results-count">@_movies.Count @( _movies.Count == 1 ? "movie" : "movies") in the collection</p>
+    <div class="movie-grid">
+        @foreach (var movie in _movies)
+        {
+            <MovieCard Movie="movie" />
+        }
+    </div>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "genre")]
+    public string? Genre { get; set; }
+
+    private List<Movie> _movies = [];
+    private IReadOnlyList<string> _genres = [];
+    private string _searchTerm = string.Empty;
+    private string _selectedGenre = string.Empty;
+    private string? _error;
+    private bool _loading = true;
+    private bool _initialized;
+
+    private bool HasActiveFilters =>
+        !string.IsNullOrWhiteSpace(_searchTerm) || !string.IsNullOrWhiteSpace(_selectedGenre);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _genres = await Catalog.GetGenresAsync();
+            _selectedGenre = _genres.FirstOrDefault(genre =>
+                string.Equals(genre, Genre, StringComparison.OrdinalIgnoreCase)) ?? string.Empty;
+            await LoadMoviesAsync();
+            _initialized = true;
+        }
+        catch (MovieDataAccessException exception)
+        {
+            Logger.LogWarning(exception, "The movies page could not load the movie catalog.");
+            _error = exception.Message;
+            _loading = false;
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!_initialized)
+        {
+            return;
+        }
+
+        var selectedGenre = _genres.FirstOrDefault(genre =>
+            string.Equals(genre, Genre, StringComparison.OrdinalIgnoreCase)) ?? string.Empty;
+
+        if (!string.Equals(_selectedGenre, selectedGenre, StringComparison.Ordinal))
+        {
+            _selectedGenre = selectedGenre;
+            await LoadMoviesAsync();
+        }
+    }
+
+    private async Task LoadMoviesAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        try
+        {
+            _movies = (await Catalog.GetMoviesAsync(_searchTerm, _selectedGenre)).ToList();
+        }
+        catch (MovieDataAccessException exception)
+        {
+            Logger.LogWarning(exception, "The movies page could not load filtered results.");
+            _movies = [];
+            _error = exception.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}
